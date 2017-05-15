@@ -1,0 +1,189 @@
+#!/opt/python/bin/python
+
+import os
+import sys
+import string
+import argparse
+import subprocess
+import re
+from os.path import commonprefix
+
+class Struct:
+    """ base structure """
+    pass
+
+class GPUcard:
+    """ Base class """
+    def __init__(self, argv):
+        self.args = argv[1:]
+        self.usageName  = os.path.basename(argv[0])
+        self.parseArgs()
+        self.setDefaults()
+    
+    def setDefaults(self):
+        self.vendor = '10de'            # GPU card vendor, default to NVIDIA
+        self.currentCard = None         # current GPU card 
+        self.cards = {}                 # info dictionary of found GPU cards
+        self.count = 0                  # counter for GPU cards
+        self.nprefix = "gpupci"         # prefix in the GPU card name. Arbitrary choice
+                                        # and is the same as in rocks gpu commands 
+        self.devlinkAudio = "bus/pci/drivers/snd_hda_intel" # driver symlink for GPU audio card 
+        self.devlinkVideo = "bus/pci/drivers/nvidia"        # driver symlink for GPU video card 
+        self.devlinkStub  = "bus/pci/drivers/pci-stub"      # driver symlink for detached card of GPU (audio/video)
+        self.devlinks = {"video":self.devlinkVideo, "audio":self.devlinkAudio,"stub":self.devlinkStub}
+
+    def parseArgs(self):
+        parser = argparse.ArgumentParser()
+
+        parser.add_argument('-a', dest='attach_card', 
+            help='Attach GPU card and its associated Audio device to a physical host. Argument is a GPU card name, use "all" for all cards.')
+        parser.add_argument('-d', dest='detach_card', 
+            help='Detach GPU card and its associated Audio device from a physical host. Argument is a GPU card name, use "all" for all cards.')
+        parser.add_argument('-s', dest='status_card', 
+            help='Show GPU card devices link status.')
+        parser.add_argument('-l', dest='list', action='store_true', help='List available GPU cards names and their associated pci buses.')
+
+        self.args = parser.parse_args()
+
+    def runSubprocess(self, command):
+        p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = p.communicate()
+        return out, err
+
+    def readDeviceLink(self, addr, type):
+        """Check device driver link. If points to video or audio device return 1 (active)
+           If points ot pci-stub return 0 (is detached). In case of empty output assume
+           it is taken by the device. 
+        """
+        command = ["readlink", "/sys/bus/pci/devices/%s/driver" % addr] 
+        out, err = self.runSubprocess(command)
+        if out.find(type) > 0: 
+            return 1
+        elif out.find(self.devlinks["stub"]) > 0: 
+            return 0
+        else:
+            if len(out) == 0: 
+                return 1
+
+    def detachDeviceLink(self, pciaddr, type):
+        result = self.readDeviceLink(pciaddr, type)
+        if result:
+            addr = self.pci2virsh(pciaddr)
+            command = ["virsh", "nodedev-detach", "%s" % addr] 
+            out, err = self.runSubprocess(command)
+            if out.find ("Device %s detached" % addr) > -1 :
+                print "Detached %s card %s of %s" % (type, pciaddr, self.currentCard)
+                return 0
+            if err:
+                print err
+                return 1
+        else:
+            print "%s %s card %s is already detached" % (self.currentCard, type, pciaddr)
+            return 0
+
+    def detachGPU(self):
+        allcards = self.getPciCards()
+        if self.currentCard in allcards:
+            cards = [self.currentCard]
+        elif self.currentCard  == "all": 
+            cards = allcards
+        else :
+            print "GPU card %s not found" % self.currentCard
+            return
+
+        for c in cards:
+            pciV, pciA = self.cards[c]
+            self.detachDeviceLink(pciV, "video")
+            self.detachDeviceLink(pciA, "audio")
+
+
+    def attachGPU(self):
+        allcards = self.getPciCards()
+        if self.currentCard in allcards:
+            cards = [self.currentCard]
+        elif self.currentCard  == "all": 
+            cards = allcards
+        else :
+            print "GPU card %s not found" % self.currentCard
+            return
+
+        for c in cards:
+            pciV, pciA = self.cards[c]
+            if self.attachDeviceLink(pciV, "video"):
+                # if video card is busy do not reattach audio
+                print "Not reattaching associated audio device %s" % pciA
+                continue
+            else:
+                self.attachDeviceLink(pciA, "audio")
+
+
+    def attachDeviceLink(self, pciaddr, type):
+        result = self.readDeviceLink(pciaddr, type)
+        if result:
+            print "%s %s card %s is already attached" % (self.currentCard, type, pciaddr)
+            return 0
+        else:
+            addr = self.pci2virsh(pciaddr)
+            command = ["virsh", "nodedev-reattach", "%s" % addr] 
+            out, err = self.runSubprocess(command)
+            if out.find ("Device %s re-attached" % addr) > -1 :
+                print "Attached %s card %s of %s" % (type, pciaddr, self.currentCard)
+                return 0
+            if err:
+                print err
+                return 1
+
+    def pci2virsh(self, addr):
+        # convert GPU card address to a notation used by virsh
+        # for example  from 0000:02:00.0 to pci_0000_02_00_0
+        return "pci_" + re.sub(r'(:|\.)', '_', addr)
+
+    def listGPU(self):
+        """ List available GPU cards as a given name and virsh notation pci address"""
+	for k in self.getPciCards():
+            addr = self.pci2virsh(self.cards[k][0])
+            print k, addr
+
+    def getPciCards(self):
+        video = "controller:"
+        audio = "Audio device:"
+        command = ["lspci", "-D", "-d %s:" % self.vendor]
+        out, err = self.runSubprocess(command)
+
+        # remove last new line character and split into lines
+        lines = out[:-1].split('\n') 
+        for l in lines:      
+            addr = l.split()[0]
+            if l.find(video) > 0:   # add GPU video card
+                self.count += 1
+                cardname = "%s%d" % (self.nprefix,self.count)
+                self.cards[cardname] = [addr]
+            elif l.find(audio) > 0: # add GPU audio card
+                if self.cards[cardname][0][:-1] == addr[:-1]:
+                    self.cards[cardname].append(addr) 
+            else:
+                continue
+
+        return sorted(self.cards.keys())
+
+
+    def run(self):
+        #if self.args.vendor:
+        #    self.vendor = self.args.vendor 
+            # will need to adjust some settings for a different vendor
+        if self.args.attach_card:
+            self.currentCard = self.args.attach_card
+            self.attachGPU()
+        if self.args.detach_card:
+            self.currentCard = self.args.detach_card
+            self.detachGPU()
+        if self.args.list:
+            self.listGPU()
+        if self.args.status_card:
+            self.statusGPU()
+    
+
+if __name__ == "__main__":
+        app=GPUcard(sys.argv)
+        app.run()
+
