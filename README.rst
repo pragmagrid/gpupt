@@ -68,6 +68,33 @@ What is installed:
    This command is executed on the GPU-enabled hosts to get information (list) or to make GPU card
    available/non-available on the physical host PCI bus.  For more info use ``gpupci -h``
 
+Prepare physical host for passthrough
+--------------------------------------
+
+The Intel VT-d extensions  provide hardware support for assigning a physical device to a guest VM. 
+There are 2 parts in enabling extensions (assuming that the hardware provides a support for it).
+The changes are done on the physical host that has GPU cards and will be hosting VMs. 
+
+#. **Enable VT-D extensions in BIOS** 
+   Verify if your processor supports VT-d extensions.  The extensions differ among manufactureres. 
+   Consult the BIOS settings. 
+
+#. **Activate Vt-d in the kernel**
+   Append the following flags to the end of the ``kernel`` line in boot.grub: :: 
+
+     intel_iommu=on iommu=pt pci=realloc rdblacklist=nvidia
+
+   The last flag is to disable loading of nvidia driver.  
+
+   Reboot.  
+
+   When the host is rebooted, check if the changes are enabled:  :: 
+     
+     # cat /proc/cmdline
+     the output  should contain aboive added flags
+     # dmesg | grep -i PCI-DMA 
+     PCI-DMA: Intel(R) Virtualization Technology for Directed I/O
+ 
 
 Detach GPU from a physical host
 ---------------------------------
@@ -134,3 +161,16 @@ for the GPU card. For this example, the output would contain: ::
 
 At the next start of the VM  the  GPU card  will be available to the VM. 
 On the VM the GPU PCI bus address will be different from the GPU PCI address of the physical host. 
+
+Links
+---------
+
+Useful links for enabling PCI passthrough devices
+
+* Enabling `PCI passthrough with KVM`_
+* Determine if your processor supports `Intel Virtualization Technology`_
+* Red HAt `Guest VM device configuration`_
+
+.. _PCI passthrough with KVM: https://docs.fedoraproject.org/en-US/Fedora/13/html/Virtualization_Guide/chap-Virtualization-PCI_passthrough.html
+.. _Intel Virtualization Technology: http://www.intel.com/content/www/us/en/support/processors/000005486.html
+.. _Guest VM device configuration: https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Virtualization_Deployment_and_Administration_Guide/chap-Guest_virtual_machine_device_configuration.html#sect-device-GPU
