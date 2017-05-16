@@ -90,4 +90,4 @@ class Command(rocks.commands.dump.host.command):
 						attr.attr, v))
 
 
-RollName = "base"
+RollName = "gpupt"

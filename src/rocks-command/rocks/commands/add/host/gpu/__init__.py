@@ -123,4 +123,4 @@ class Command(rocks.commands.add.host.command):
 			except sqlalchemy.exc.IntegrityError:
 				self.abort('gpu "%s" exists' % gpu)
 
-RollName = "base"
+RollName = "gpupt"

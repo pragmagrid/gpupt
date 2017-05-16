@@ -119,4 +119,4 @@ class Command(rocks.commands.set.host.command):
 		for node in self.newdb.getNodesfromNames(args):
 			self.newdb.setCategoryAttr('host', node.name, gpu, value)
 
-RollName = "base"
+RollName = "gpupt"

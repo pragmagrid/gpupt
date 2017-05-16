@@ -94,4 +94,4 @@ class Command(rocks.commands.remove.host.command):
 		for node in self.newdb.getNodesfromNames(args):
 			self.newdb.removeCategoryAttr('host', node.name, gpu)
 
-RollName = "base"
+RollName = "gpupt"
