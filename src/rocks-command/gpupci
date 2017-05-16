@@ -21,7 +21,7 @@ class GPUcard:
         self.setDefaults()
     
     def setDefaults(self):
-        self.vendor = '10de'            # GPU card vendor, default to NVIDIA
+        self.vendor = '10de'            # NVIDIA vendor id
         self.currentCard = None         # current GPU card 
         self.cards = {}                 # info dictionary of found GPU cards
         self.count = 0                  # counter for GPU cards
@@ -62,7 +62,7 @@ class GPUcard:
         elif out.find(self.devlinks["stub"]) > 0: 
             return 0
         else:
-            if len(out) == 0: 
+            if len(out) == 0:
                 return 1
 
     def detachDeviceLink(self, pciaddr, type):
@@ -150,6 +150,8 @@ class GPUcard:
         command = ["lspci", "-D", "-d %s:" % self.vendor]
         out, err = self.runSubprocess(command)
 
+        if len(out) == 0:
+            return []
         # remove last new line character and split into lines
         lines = out[:-1].split('\n') 
         for l in lines:      
@@ -168,9 +170,6 @@ class GPUcard:
 
 
     def run(self):
-        #if self.args.vendor:
-        #    self.vendor = self.args.vendor 
-            # will need to adjust some settings for a different vendor
         if self.args.attach_card:
             self.currentCard = self.args.attach_card
             self.attachGPU()
