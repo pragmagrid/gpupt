@@ -62,19 +62,18 @@ What is installed:
      rocks set host gpu ...
 
 #. A plugin ``plugin_device.py`` to manage guest VM GPU pass-through PCI addressing.
-   Used in rocks command: ::
-   
-     rocks report host vm config
+   Used by rocks command ``rocks report host vm config``. 
 
 #. A command ``gpupci`` to manage GPU cards PCI addressing (list, detach, attach).
    This command is executed on the GPU-enabled hosts to get information (list) or to make GPU card
    available/non-available on the physical host PCI bus.  For more info use ``gpupci -h``
 
 
-Using
--------
+Detach GPU from a physical host
+---------------------------------
 
 The commands to detach GPU cards from  physical hosts are run once for each GPU card on each host. 
+The list below includes some informational commands.
 
 #. Run ``gpupci -l`` command on all GPU-enabled vm-containers to get information about the GPU cards. 
    For example,  on vm-container-0-15  the output is :: 
@@ -98,7 +97,8 @@ The commands to detach GPU cards from  physical hosts are run once for each GPU 
     vm-container-0-15: gpupci1 pci_0000_02_00_0
     vm-container-0-15: gpupci2 pci_0000_03_00_0
 
-#. Detach the GPU cards from the physical host. This needs to be done once  for each GPU card 
+#. Detach the GPU cards from the physical host. This is an actual commadn that detaches the GPU from the
+   physical host  PCI bus. This needs to be done once  for each GPU card 
    before any VM can use the GPU PCI in pass-through mode. This can be done as a single command
    for all cards :: 
 
@@ -108,6 +108,9 @@ The commands to detach GPU cards from  physical hosts are run once for each GPU 
 
     # rocks run host vm-container-0-2 "gpupci --detach gpupci1"
 
+
+Attach GPU to a guest VM
+---------------------------
 Once the GPU card is detached from a physical host it is ready for use by the guest VM. 
 We assume that a single GPU card is assigned to a VM and that a VM is run on a GPU-enabled vm-container. 
 For example, if there is a VM rocks-33 that is created and running on a vm-container-0-15 and we want  
