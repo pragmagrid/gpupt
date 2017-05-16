@@ -22,6 +22,7 @@ Assumptions
    unique across different hosts. 
 #. A single GPU card will be assigned to a VM host. The logical name for a GPU card on any VM is always ``gpupci``
    without indexes.  See example below for usage.
+#. `Cuda roll`_ is installed on vm-containers and on the guest VMs.
 
 
 Building
@@ -174,3 +175,4 @@ Useful links for enabling PCI passthrough devices
 .. _PCI passthrough with KVM: https://docs.fedoraproject.org/en-US/Fedora/13/html/Virtualization_Guide/chap-Virtualization-PCI_passthrough.html
 .. _Intel Virtualization Technology: http://www.intel.com/content/www/us/en/support/processors/000005486.html
 .. _Guest VM device configuration: https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Virtualization_Deployment_and_Administration_Guide/chap-Guest_virtual_machine_device_configuration.html#sect-device-GPU
+.. _Cuda roll: https://github.com/nbcrrolls/cuda
