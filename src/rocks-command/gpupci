@@ -21,6 +21,7 @@ class GPUcard:
         self.setDefaults()
     
     def setDefaults(self):
+        """ sets defaults for used variables"""
         self.vendor = '10de'            # NVIDIA vendor id
         self.currentCard = None         # current GPU card 
         self.cards = {}                 # info dictionary of found GPU cards
@@ -33,19 +34,20 @@ class GPUcard:
         self.devlinks = {"video":self.devlinkVideo, "audio":self.devlinkAudio,"stub":self.devlinkStub}
 
     def parseArgs(self):
+        """arguments parser"""
         parser = argparse.ArgumentParser()
-
         parser.add_argument('-a', dest='attach_card', 
             help='Attach GPU card and its associated Audio device to a physical host. Argument is a GPU card name, use "all" for all cards.')
         parser.add_argument('-d', dest='detach_card', 
             help='Detach GPU card and its associated Audio device from a physical host. Argument is a GPU card name, use "all" for all cards.')
         parser.add_argument('-s', dest='status_card', 
-            help='Show GPU card devices link status.')
+            help='Show GPU card devices link status. Argument is a GPU card name, use "all" for all cards.')
         parser.add_argument('-l', dest='list', action='store_true', help='List available GPU cards names and their associated pci buses.')
 
         self.args = parser.parse_args()
 
     def runSubprocess(self, command):
+        """run a command in shell and collect stderr and stdout"""
         p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
         return out, err
@@ -53,7 +55,7 @@ class GPUcard:
     def readDeviceLink(self, addr, type):
         """Check device driver link. If points to video or audio device return 1 (active)
            If points ot pci-stub return 0 (is detached). In case of empty output assume
-           it is taken by the device. 
+           it is taken by the device.
         """
         command = ["readlink", "/sys/bus/pci/devices/%s/driver" % addr] 
         out, err = self.runSubprocess(command)
@@ -65,14 +67,40 @@ class GPUcard:
             if len(out) == 0:
                 return 1
 
+    def requestedCards(self):
+        """Return list of names for user requested  cards. 
+           Empty list if none found.
+        """
+        allcards = self.getPciCards()
+        if self.currentCard in allcards:
+            cards = [self.currentCard]
+        elif self.currentCard  == "all":
+            cards = allcards
+        else :
+            print "GPU card %s not found" % self.currentCard
+            cards = []
+
+        return cards
+
+    def detachGPU(self):
+        """Detach all cards in user request list from the host physical PCI bus 
+        """
+        cards = self.requestedCards()
+        for c in cards:
+            pciV, pciA = self.cards[c]
+            self.detachDeviceLink(pciV, "video")
+            self.detachDeviceLink(pciA, "audio")
+
     def detachDeviceLink(self, pciaddr, type):
+        """Run command virsh nodedev-detach on a given pci card
+        """
         result = self.readDeviceLink(pciaddr, type)
         if result:
             addr = self.pci2virsh(pciaddr)
             command = ["virsh", "nodedev-detach", "%s" % addr] 
             out, err = self.runSubprocess(command)
             if out.find ("Device %s detached" % addr) > -1 :
-                print "Detached %s card %s of %s" % (type, pciaddr, self.currentCard)
+                print "Detached %s %s card %s" % (self.currentCard, type, pciaddr)
                 return 0
             if err:
                 print err
@@ -81,43 +109,22 @@ class GPUcard:
             print "%s %s card %s is already detached" % (self.currentCard, type, pciaddr)
             return 0
 
-    def detachGPU(self):
-        allcards = self.getPciCards()
-        if self.currentCard in allcards:
-            cards = [self.currentCard]
-        elif self.currentCard  == "all": 
-            cards = allcards
-        else :
-            print "GPU card %s not found" % self.currentCard
-            return
-
-        for c in cards:
-            pciV, pciA = self.cards[c]
-            self.detachDeviceLink(pciV, "video")
-            self.detachDeviceLink(pciA, "audio")
-
-
     def attachGPU(self):
-        allcards = self.getPciCards()
-        if self.currentCard in allcards:
-            cards = [self.currentCard]
-        elif self.currentCard  == "all": 
-            cards = allcards
-        else :
-            print "GPU card %s not found" % self.currentCard
-            return
-
+        """Reattach all cards in user request list to a host physical PCI bus 
+        """
+        cards = self.requestedCards()
         for c in cards:
             pciV, pciA = self.cards[c]
             if self.attachDeviceLink(pciV, "video"):
-                # if video card is busy do not reattach audio
+                # if video card is still busy do not reattach audio
                 print "Not reattaching associated audio device %s" % pciA
                 continue
             else:
                 self.attachDeviceLink(pciA, "audio")
 
-
     def attachDeviceLink(self, pciaddr, type):
+        """Run command virsh nodedev-reettach on a given pci card
+        """
         result = self.readDeviceLink(pciaddr, type)
         if result:
             print "%s %s card %s is already attached" % (self.currentCard, type, pciaddr)
@@ -133,18 +140,43 @@ class GPUcard:
                 print err
                 return 1
 
+    def statusGPU(self):
+        """Show device driver link status for all user requestsed cards
+        """
+        cards = self.requestedCards()
+        for c in cards:
+            pciV, pciA = self.cards[c]
+            self.statusDeviceLink(c, pciV, "video")
+            self.statusDeviceLink(c, pciA, "audio")
+
+    def statusDeviceLink(self, card, pciaddr, type):
+        """Show device driver link status for a card specified by pci address and type (video/audio)
+        """
+        result = self.readDeviceLink(pciaddr, type)
+        if result:
+                print "GPU %s %s device %s is linked to %s driver" % (card, type, pciaddr, self.devlinks[type])
+        else:
+                print "GPU %s %s device %s is linked to %s driver" % (card, type, pciaddr, self.devlinks["stub"])
+
     def pci2virsh(self, addr):
-        # convert GPU card address to a notation used by virsh
-        # for example  from 0000:02:00.0 to pci_0000_02_00_0
+        """Convert GPU card address to a notation used by virsh
+           For example: from 0000:02:00.0 to pci_0000_02_00_0
+        """
         return "pci_" + re.sub(r'(:|\.)', '_', addr)
 
     def listGPU(self):
-        """ List available GPU cards as a given name and virsh notation pci address"""
+        """List available GPU cards as a given name and virsh notation pci address
+        """
 	for k in self.getPciCards():
             addr = self.pci2virsh(self.cards[k][0])
             print k, addr
 
     def getPciCards(self):
+        """Find all GPU pci adresses and put them in te self.cards dictionary. 
+           Each item  key is a gpucard logical name and a values is [v1, v2]
+           with  pci adresses (v1 for video, v2 for audio)
+           Return sorted logical names 
+        """
         video = "controller:"
         audio = "Audio device:"
         command = ["lspci", "-D", "-d %s:" % self.vendor]
@@ -168,20 +200,19 @@ class GPUcard:
 
         return sorted(self.cards.keys())
 
-
     def run(self):
+        if self.args.list:
+            self.listGPU()
         if self.args.attach_card:
             self.currentCard = self.args.attach_card
             self.attachGPU()
         if self.args.detach_card:
             self.currentCard = self.args.detach_card
             self.detachGPU()
-        if self.args.list:
-            self.listGPU()
         if self.args.status_card:
+            self.currentCard = self.args.status_card
             self.statusGPU()
     
-
 if __name__ == "__main__":
         app=GPUcard(sys.argv)
         app.run()
