@@ -26,6 +26,4 @@ setup(
     package_data={'rocks.db.mappings': ['*.sql']},
     # disable zip installation
     zip_safe = False,
-    #the command line called by users    
-    scripts=['gpupci'],
 )

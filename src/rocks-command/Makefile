@@ -71,6 +71,8 @@ build:
 install::
 	find rocks | sed -e 's/\//./g' -e '/\.py/d' -e '/\.sql/d' > packages
 	$(PY.PATH) setup.py install -f --root=$(ROOT)
+	mkdir -p $(ROOT)/$(PKGROOT)/bin
+	install -m 755 gpupci $(ROOT)/$(PKGROOT)/bin
 
 clean::
 	rm -rf build
