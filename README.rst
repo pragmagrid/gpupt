@@ -9,14 +9,17 @@ Introduction
 This roll enables GPU pass-through to a guest VM. 
 The roll installs rocks commands for GPU management a frontend and vm-container nodes. 
 
-This roll assumes that GPU cards are NVIDIA cards that have Video/Audio function for each card
-which are designated by a function 0/1 respectively on the PCI bus.  For example, :: 
-
-    0000:02:00.0 3D controller: NVIDIA Corporation GF100GL [Tesla T20 Processor] (rev a3)
-    0000:02:00.1 Audio device: NVIDIA Corporation GF100 High Definition Audio Controller (rev a1)
-
 Assumptions
 -------------
+
+#. This roll assumes that GPU cards are NVIDIA cards that have Video/Audio function for each card
+   which are designated by a function 0/1 respectively on the PCI bus.  For example, to list 
+   nvidia devices :: 
+
+      [root@gpu-1-6]# lspci -D -d 10de:
+      0000:02:00.0 3D controller: NVIDIA Corporation GF100GL [Tesla T20 Processor] (rev a3)
+      0000:02:00.1 Audio device: NVIDIA Corporation GF100 High Definition Audio Controller (rev a1)
+
 #. This roll assumes that GPU cards for each physical host are given logical names with the prefix ``gpupci``
    The names are unique on a single host and the sequence starts with ``gpupci1``. The name is not 
    unique across different hosts. 
@@ -92,10 +95,26 @@ The changes are done on the physical host that has GPU cards and will be hosting
    When the host is rebooted, check if the changes are enabled:  :: 
      
      # cat /proc/cmdline
-     the output  should contain aboive added flags
+     ro root=UUID=575b0aac-0b20-4024-8a2d-26f8d3cc460b rd_NO_LUKS rd_NO_LVM LANG=en_US.UTF-8 rd_NO_MD SYSFONT=latarcyrheb-sun16  KEYBOARDTYPE=pc KEYTABLE=us rd_NO_DM rhgb quiet intel_iommu=on iommu=pt pci=realloc  rdblacklist=nvidia
+
+   the output  should contain added flags
+
+     The following two commands shoudl show PCI-DMA and IOMMU ::
+
      # dmesg | grep -i PCI-DMA 
      PCI-DMA: Intel(R) Virtualization Technology for Directed I/O
- 
+     # grep -i IOMMU /var/log/messages 
+     Aug 28 15:06:23 gpu-1-6 kernel: Command line: ro root=UUID=575b0aac-0b20-4024-8a2d-26f8d3cc460b rd_NO_LUKS rd_NO_LVM LANG=en_US.UTF-8 rd_NO_MD SYSFONT=latarcyrheb-sun16  KEYBOARDTYPE=pc KEYTABLE=us rd_NO_DM rhgb quiet intel_iommu=on iommu=pt pci=realloc  rdblacklist=nvidia
+     Aug 28 15:06:23 gpu-1-6 kernel: Kernel command line: ro root=UUID=575b0aac-0b20-4024-8a2d-26f8d3cc460b rd_NO_LUKS rd_NO_LVM LANG=en_US.UTF-8 rd_NO_MD SYSFONT=latarcyrheb-sun16  KEYBOARDTYPE=pc KEYTABLE=us rd_NO_DM rhgb quiet intel_iommu=on iommu=pt pci=realloc  rdblacklist=nvidia
+     Aug 28 15:06:23 gpu-1-6 kernel: Intel-IOMMU: enabled
+     Aug 28 15:06:23 gpu-1-6 kernel: dmar: IOMMU 0: reg_base_addr fbffe000 ver 1:0 cap c90780106f0462 ecap f020fe
+     Aug 28 15:06:23 gpu-1-6 kernel: IOMMU 0xfbffe000: using Queued invalidation
+     Aug 28 15:06:23 gpu-1-6 kernel: IOMMU: hardware identity mapping for device 0000:00:00.0
+     ...
+     Aug 31 10:57:53 gpu-1-6 kernel: IOMMU: hardware identity mapping for device 0000:04:00.1
+     Aug 31 10:57:53 gpu-1-6 kernel: IOMMU: Setting RMRR:
+     Aug 31 10:57:53 gpu-1-6 kernel: IOMMU: Prepare 0-16MiB unity mapping for LPC
+
 
 Detach GPU from a physical host
 ---------------------------------
@@ -125,7 +144,7 @@ The list below includes some informational commands.
     vm-container-0-15: gpupci1 pci_0000_02_00_0
     vm-container-0-15: gpupci2 pci_0000_03_00_0
 
-#. Detach the GPU cards from the physical host. This is an actual commadn that detaches the GPU from the
+#. Detach the GPU cards from the physical host. This is an actual command that detaches the GPU from the
    physical host  PCI bus. This needs to be done once  for each GPU card 
    before any VM can use the GPU PCI in pass-through mode. This can be done as a single command
    for all cards :: 
@@ -162,6 +181,44 @@ for the GPU card. For this example, the output would contain: ::
 
 At the next start of the VM  the  GPU card  will be available to the VM. 
 On the VM the GPU PCI bus address will be different from the GPU PCI address of the physical host. 
+
+Useful commands
+---------------
+
+#. listing of pci devices ::
+
+     lspci -D -n
+     lspci -D -n -d 10de:
+     lspci -D -nn -d 10de:
+     lspci -D -nn -d 10de:
+     lspci -vvv -s 0000:03:00.0
+
+#. virsh detach and reattach devices :: 
+
+     virsh nodedev-detach pci_0000_02_00_0
+     virsh nodedev-detach pci_0000_02_00_1
+     virsh nodedev-reattach pci_0000_02_00_1
+
+#. virsh info for the devices 
+
+   as a tree ::  
+
+      virsh nodedev-list --tree
+
+   GPU cards info ::
+
+     virsh nodedev-dumpxml pci_0000_02_00_0 > pci-gpu1
+     virsh nodedev-dumpxml pci_0000_03_00_0 > pci-gpu2
+
+#. check device  symbolic links :: 
+
+     readlink /sys/bus/pci/devices/0000\:02\:00.0/driver
+
+#. check xml definition of the VM :: 
+
+     virsh dumpxml rocce-vm3 > vm3.out
+   
+   For a GPU-enabled VM, ``hostdev`` section described above should be in the output.
 
 Links
 ---------
