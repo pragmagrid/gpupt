@@ -99,7 +99,7 @@ The changes are done on the physical host that has GPU cards and will be hosting
 
    the output  should contain added flags
 
-     The following two commands shoudl show PCI-DMA and IOMMU ::
+   The following two commands shoudl show PCI-DMA and IOMMU ::
 
      # dmesg | grep -i PCI-DMA 
      PCI-DMA: Intel(R) Virtualization Technology for Directed I/O
