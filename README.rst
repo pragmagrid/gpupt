@@ -229,7 +229,7 @@ Useful links for enabling PCI passthrough devices
 * Determine if your processor supports `Intel Virtualization Technology`_
 * Red HAt `Guest VM device configuration`_
 
-.. _PCI passthrough with KVM: https://docs.fedoraproject.org/en-US/Fedora/13/html/Virtualization_Guide/chap-Virtualization-PCI_passthrough.html
+.. _PCI passthrough with KVM: https://docs-old.fedoraproject.org/en-US/Fedora/13/html/Virtualization_Guide/chap-Virtualization-PCI_passthrough.html
 .. _Intel Virtualization Technology: http://www.intel.com/content/www/us/en/support/processors/000005486.html
 .. _Guest VM device configuration: https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Virtualization_Deployment_and_Administration_Guide/chap-Guest_virtual_machine_device_configuration.html#sect-device-GPU
 .. _Cuda roll: https://github.com/nbcrrolls/cuda
