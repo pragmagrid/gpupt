@@ -90,16 +90,29 @@ The changes are done on the physical host that has GPU cards and will be hosting
 
    The last flag is to disable loading of nvidia driver.  
 
-   Reboot.  
+#. Uninstall nvidia driver. This step is important otherwise
+   when booting VMs later the following errors may be present in 
+   /var/log/libvirt/qemu/VMNAME.log  and VM will not boot:: 
 
-   When the host is rebooted, check if the changes are enabled:  :: 
+        Failed to assign device "hostdev0" : Device or resource busy
+        2017-08-31T22:17:28.117713Z qemu-kvm: -device pci-assign,host=02:00.0,id=hostdev0, ...  Device 'pci-assign' could not be initialized
+
+   To uninstall the driver :: 
+
+     /opt/cuda/driver/uninstall-driver 
+     more /var/log/nvidia-uninstall.log
+
+
+Reboot.  
+
+When the host is rebooted, check if the changes are enabled:  :: 
      
      # cat /proc/cmdline
      ro root=UUID=575b0aac-0b20-4024-8a2d-26f8d3cc460b rd_NO_LUKS rd_NO_LVM LANG=en_US.UTF-8 rd_NO_MD SYSFONT=latarcyrheb-sun16  KEYBOARDTYPE=pc KEYTABLE=us rd_NO_DM rhgb quiet intel_iommu=on iommu=pt pci=realloc  rdblacklist=nvidia
 
-   the output  should contain added flags
+the output  should contain added flags
 
-   The following two commands shoudl show PCI-DMA and IOMMU ::
+The following two commands shoudl show PCI-DMA and IOMMU ::
 
      # dmesg | grep -i PCI-DMA 
      PCI-DMA: Intel(R) Virtualization Technology for Directed I/O
@@ -115,6 +128,11 @@ The changes are done on the physical host that has GPU cards and will be hosting
      Aug 31 10:57:53 gpu-1-6 kernel: IOMMU: Setting RMRR:
      Aug 31 10:57:53 gpu-1-6 kernel: IOMMU: Prepare 0-16MiB unity mapping for LPC
 
+Check that nvidia driver is not loaded :: 
+
+     lsmod | grep nvidia
+
+should return nothing
 
 Detach GPU from a physical host
 ---------------------------------
@@ -179,19 +197,100 @@ for the GPU card. For this example, the output would contain: ::
       </hostdev>
     </devices>
 
-At the next start of the VM  the  GPU card  will be available to the VM. 
-On the VM the GPU PCI bus address will be different from the GPU PCI address of the physical host. 
+At the next start of the VM the  GPU card  will be available to the VM. 
+
+Checks on a VM
+----------------
+
+#. PCI buss address
+
+   On the VM the GPU PCI bus address will be different from the GPU PCI address of the physical host. 
+   For eample, a GPU card  on a physical host ::
+
+      [root@gpu-1-6]# lspci -D -d 10de:
+      0000:02:00.0 3D controller: NVIDIA Corporation GF100GL [Tesla T20 Processor] (rev a3)
+
+   shows on a VM as ::
+
+      root@rocce-vm3 ~]# lspci -d 10de:
+      00:06.0 3D controller: NVIDIA Corporation GF100GL [Tesla T20 Processor] (rev a3)
+
+#.  check nvidia driver is loaded ::  
+
+      # lsmod | grep nvidia
+      nvidia_uvm             63294  0 
+      nvidia               8368623  1 nvidia_uvm
+      i2c_core               29964  2 nvidia,i2c_piix4
+
+#. check if the GPU card is present  :: 
+
+      # nvidia-smi 
+      Thu Aug 31 17:37:32 2017       
+      +------------------------------------------------------+                       
+      | NVIDIA-SMI 346.59     Driver Version: 346.59         |                       
+      |-------------------------------+----------------------+----------------------+
+      | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+      | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+      |===============================+======================+======================|
+      |   0  Tesla M2050         On   | 0000:00:06.0     Off |                    0 |
+      | N/A   N/A    P1    N/A /  N/A |      6MiB /  2687MiB |      0%   E. Process |
+      +-------------------------------+----------------------+----------------------+
+                                                                                     
+      +-----------------------------------------------------------------------------+
+      | Processes:                                                       GPU Memory |
+      |  GPU       PID  Type  Process name                               Usage      |
+      |=============================================================================|
+      |  No running processes found                                                 |
+      +-----------------------------------------------------------------------------+
+
+#. run a few commands form nvidia toolkit to get more info about the GPU card :: 
+
+      nvidia-smi -q
+      /opt/cuda/bin/deviceQuery
+      /opt/cuda/bin/deviceQueryDrv
+
 
 Useful commands
 ---------------
+
+The first set of commands can be run on physical and virtual hsots, the  rest
+are run on aphysical host.
 
 #. listing of pci devices ::
 
      lspci -D -n
      lspci -D -n -d 10de:
      lspci -D -nn -d 10de:
-     lspci -D -nn -d 10de:
      lspci -vvv -s 0000:03:00.0
+
+   For example, the output below shows info for 2 GPU cards, for video and audio components ::
+
+     # lspci -D -n -d 10de:
+     0000:02:00.0 0302: 10de:06de (rev a3)
+     0000:02:00.1 0403: 10de:0be5 (rev a1)
+     0000:03:00.0 0302: 10de:06de (rev a3)
+     0000:03:00.1 0403: 10de:0be5 (rev a1)
+
+   The video card component ends on ``0`` abd audio card component ends on ``1``.
+
+#. virsh info for the devices as a tree ::  
+
+      virsh nodedev-list --tree
+
+   Note, that 4 devices from the above lspci command 
+   in the output of this command become :: 
+
+      +- pci_0000_00_03_0            (comment: parent pci device)
+      |   |
+      |   +- pci_0000_02_00_0
+      |   +- pci_0000_02_00_1
+      |     
+      +- pci_0000_00_07_0            (comment: parent pci device)
+      |   |
+      |   +- pci_0000_03_00_0
+      |   +- pci_0000_03_00_1
+
+   This syntax  for pci bus is used in all ``virsh`` commands below.
 
 #. virsh detach and reattach devices :: 
 
@@ -199,13 +298,8 @@ Useful commands
      virsh nodedev-detach pci_0000_02_00_1
      virsh nodedev-reattach pci_0000_02_00_1
 
-#. virsh info for the devices 
 
-   as a tree ::  
-
-      virsh nodedev-list --tree
-
-   GPU cards info ::
+#. GPU cards info ::
 
      virsh nodedev-dumpxml pci_0000_02_00_0 > pci-gpu1
      virsh nodedev-dumpxml pci_0000_03_00_0 > pci-gpu2
@@ -218,7 +312,7 @@ Useful commands
 
      virsh dumpxml rocce-vm3 > vm3.out
    
-   For a GPU-enabled VM, ``hostdev`` section described above should be in the output.
+   For a GPU-enabled VM, ``hostdev`` section described in the sections above should be in the output.
 
 Links
 ---------
