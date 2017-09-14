@@ -167,11 +167,11 @@ The list below includes some informational commands.
    before any VM can use the GPU PCI in pass-through mode. This can be done as a single command
    for all cards :: 
 
-    # rocks run host vm-container-0-15 "gpupci --detach all"
+    # rocks run host vm-container-0-15 "gpupci -d all"
 
    or using a specific logical name for a single GPU card  on a given host :: 
 
-    # rocks run host vm-container-0-2 "gpupci --detach gpupci1"
+    # rocks run host vm-container-0-2 "gpupci -d gpupci1"
 
 
 Attach GPU to a guest VM
@@ -202,7 +202,7 @@ At the next start of the VM the  GPU card  will be available to the VM.
 Checks on a VM
 ----------------
 
-#. PCI buss address
+#. PCI bus address
 
    On the VM the GPU PCI bus address will be different from the GPU PCI address of the physical host. 
    For eample, a GPU card  on a physical host ::
