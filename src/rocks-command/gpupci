@@ -59,7 +59,7 @@ class GPUcard:
         """
         command = ["readlink", "/sys/bus/pci/devices/%s/driver" % addr] 
         out, err = self.runSubprocess(command)
-        if out.find(type) > 0: 
+        if out.find(self.devlinks[type]) > 0: 
             return 1
         elif out.find(self.devlinks["stub"]) > 0: 
             return 0
@@ -88,25 +88,26 @@ class GPUcard:
         cards = self.requestedCards()
         for c in cards:
             pciV, pciA = self.cards[c]
-            self.detachDeviceLink(pciV, "video")
-            self.detachDeviceLink(pciA, "audio")
+            self.detachDeviceLink(c, pciV, "video")
+            self.detachDeviceLink(c, pciA, "audio")
 
-    def detachDeviceLink(self, pciaddr, type):
+    def detachDeviceLink(self, card, pciaddr, type):
         """Run command virsh nodedev-detach on a given pci card
         """
+        self.currentCard = card
         result = self.readDeviceLink(pciaddr, type)
         if result:
             addr = self.pci2virsh(pciaddr)
             command = ["virsh", "nodedev-detach", "%s" % addr] 
             out, err = self.runSubprocess(command)
             if out.find ("Device %s detached" % addr) > -1 :
-                print "Detached %s %s card %s" % (self.currentCard, type, pciaddr)
+                print "Detached GPU card '%s' %s device %s" % (self.currentCard, type, pciaddr)
                 return 0
             if err:
                 print err
                 return 1
         else:
-            print "%s %s card %s is already detached" % (self.currentCard, type, pciaddr)
+            print "GPU card '%s' %s device %s is already detached" % (self.currentCard, type, pciaddr)
             return 0
 
     def attachGPU(self):
@@ -154,9 +155,9 @@ class GPUcard:
         """
         result = self.readDeviceLink(pciaddr, type)
         if result:
-                print "GPU %s %s device %s is linked to %s driver" % (card, type, pciaddr, self.devlinks[type])
+                print "GPU card '%s' %s device %s is linked to %s driver" % (card, type, pciaddr, self.devlinks[type])
         else:
-                print "GPU %s %s device %s is linked to %s driver" % (card, type, pciaddr, self.devlinks["stub"])
+                print "GPU card '%s' %s device %s is linked to %s driver" % (card, type, pciaddr, self.devlinks["stub"])
 
     def pci2virsh(self, addr):
         """Convert GPU card address to a notation used by virsh
