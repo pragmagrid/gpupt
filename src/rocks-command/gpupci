@@ -87,9 +87,13 @@ class GPUcard:
         """
         cards = self.requestedCards()
         for c in cards:
-            pciV, pciA = self.cards[c]
-            self.detachDeviceLink(c, pciV, "video")
-            self.detachDeviceLink(c, pciA, "audio")
+            if  len(self.cards[c]) == 2:
+                pciV, pciA = self.cards[c]
+                self.detachDeviceLink(c, pciV, "video")
+                self.detachDeviceLink(c, pciA, "audio")
+            if  len(self.cards[c]) == 1:
+                pciV = self.cards[c][0]
+                self.detachDeviceLink(c, pciV, "video")
 
     def detachDeviceLink(self, card, pciaddr, type):
         """Run command virsh nodedev-detach on a given pci card
@@ -146,9 +150,14 @@ class GPUcard:
         """
         cards = self.requestedCards()
         for c in cards:
-            pciV, pciA = self.cards[c]
-            self.statusDeviceLink(c, pciV, "video")
-            self.statusDeviceLink(c, pciA, "audio")
+            if  len(self.cards[c]) == 2:
+                pciV, pciA = self.cards[c]
+                self.statusDeviceLink(c, pciV, "video")
+                self.statusDeviceLink(c, pciA, "audio")
+            if  len(self.cards[c]) == 1:
+                pciV = self.cards[c][0]
+                self.statusDeviceLink(c, pciV, "video")
+            
 
     def statusDeviceLink(self, card, pciaddr, type):
         """Show device driver link status for a card specified by pci address and type (video/audio)
