@@ -1,2 +1,2 @@
 NAME    = rocks-command-gpupt
-RELEASE = 0
+RELEASE = 1

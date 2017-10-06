@@ -17,6 +17,7 @@
 	</changelog>
 
 	<package>rocks-command-gpupt</package>
+	<package>gpupt-qemu</package>
 
 
 </kickstart>
