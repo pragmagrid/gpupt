@@ -94,6 +94,7 @@ class Plugin(rocks.commands.Plugin):
   """
   db = self.db
   attrs = self.db.getHostAttrs(node.name,0)
+  rtxml = xml[:-1]
   if ("gpupci" in attrs.keys()):
       rtxml = self.newqemu(xml[:-1])
       rtxml += self.enablekvmflag()
