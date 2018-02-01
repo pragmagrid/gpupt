@@ -26,3 +26,5 @@ Rules-scripts.mk
 Rules.mk
 Rolls.mk
 
+# ignore src distro
+src/qemu/qemu*xz
