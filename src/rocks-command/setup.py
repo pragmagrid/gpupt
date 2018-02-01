@@ -15,9 +15,9 @@ setup(
     version = version,
     description = 'Rocks GPU passthrough python library extension',
     author = 'Nadya Williams',
-    author_email =  'nadya@sdsc.edu',
+    author_email =  'nwilliams@ucsd.edu',
     maintainer = 'Nadya Williams',
-    maintainer_email =  'nadya@sdsc.edu',
+    maintainer_email =  'nwilliams@ucsd.edu',
     platforms = ['linux'],
     url = 'http://www.rocksclusters.org',
     #main package, most of the code is inside here
