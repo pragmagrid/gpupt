@@ -84,11 +84,20 @@ The changes are done on the physical host that has GPU cards and will be hosting
    Consult the BIOS settings. 
 
 #. **Activate Vt-d in the kernel**
-   Append the following flags to the end of the ``kernel`` line in boot.grub: :: 
 
-     intel_iommu=on iommu=pt pci=realloc rdblacklist=nvidia
+   #. **CentOS 6**: Append the following flags to the end of the ``kernel`` line in boot.grub: :: 
 
-   The last flag is to disable loading of nvidia driver.  
+        intel_iommu=on iommu=pt pci=realloc rdblacklist=nvidia
+
+      The last flag is to disable loading of nvidia driver.  
+   #. **CentOS 7**: append the kernel command line parameters to the GRUB_CMDLINE_LINUX entry in /etc/sysconfig/grub ::
+   
+        intel_iommu=on iommu=pt pci=realloc rdblacklist=nvidia,nouveau
+      
+      Regenerate grub configuration with dracut :: 
+      
+        dracut --regenerate-all --force
+
 
 #. Uninstall nvidia driver. This step is important otherwise
    when booting VMs later the following errors may be present in 
@@ -105,7 +114,9 @@ The changes are done on the physical host that has GPU cards and will be hosting
 
 Reboot.  
 
-When the host is rebooted, check if the changes are enabled:  :: 
+When the host is rebooted, check if the changes are enabled:  
+
+**CentOS 6**: ::
      
      # cat /proc/cmdline
      ro root=UUID=575b0aac-0b20-4024-8a2d-26f8d3cc460b rd_NO_LUKS rd_NO_LVM LANG=en_US.UTF-8 rd_NO_MD SYSFONT=latarcyrheb-sun16  KEYBOARDTYPE=pc KEYTABLE=us rd_NO_DM rhgb quiet intel_iommu=on iommu=pt pci=realloc  rdblacklist=nvidia
@@ -127,6 +138,24 @@ The following two commands shoudl show PCI-DMA and IOMMU ::
      Aug 31 10:57:53 gpu-1-6 kernel: IOMMU: hardware identity mapping for device 0000:04:00.1
      Aug 31 10:57:53 gpu-1-6 kernel: IOMMU: Setting RMRR:
      Aug 31 10:57:53 gpu-1-6 kernel: IOMMU: Prepare 0-16MiB unity mapping for LPC
+
+**CentOS 7**: ::
+
+       cat /proc/cmdline 
+       BOOT_IMAGE=/boot/vmlinuz-3.10.0-693.2.2.el7.x86_64 root=UUID=4176a996-b51d-44d0-a4d8-74dbe7db81fa ro crashkernel=auto selinux=0 ipv6.disable=1 intel_iommu=on iommu=pt pci=realloc rdblacklist=nvidia,nouveau rhgb quiet pci-stub.ids=10de:1c03,10de:10f1 LANG=en_US.UTF-8
+       
+       # dmesg | grep -iE "dmar|iommu"
+       [    0.000000] Command line: BOOT_IMAGE=/boot/vmlinuz-3.10.0-693.2.2.el7.x86_64 root=UUID=4176a996-b51d-44d0-a4d8-74dbe7db81fa ro crashkernel=auto selinux=0 ipv6.disable=1 intel_iommu=on iommu=pt pci=realloc rdblacklist=nvidia,nouveau rhgb quiet pci-stub.ids=10de:1c03,10de:10f1 LANG=en_US.UTF-8
+       [    0.000000] ACPI: DMAR 000000007e1e1ff0 000BC (v01 A M I   OEMDMAR 00000001 INTL 00000001)
+       [    0.000000] Kernel command line: BOOT_IMAGE=/boot/vmlinuz-3.10.0-693.2.2.el7.x86_64 root=UUID=4176a996-b51d-44d0-a4d8-74dbe7db81fa ro crashkernel=auto selinux=0 ipv6.disable=1 intel_iommu=on iommu=pt pci=realloc rdblacklist=nvidia,nouveau rhgb quiet pci-stub.ids=10de:1c03,10de:10f1 LANG=en_US.UTF-8
+       [    0.000000] DMAR: IOMMU enabled
+       [    0.037839] DMAR: Host address width 46
+       ...
+       [    0.692358] DMAR: Ignoring identity map for HW passthrough device 0000:00:1f.0 [0x0 - 0xffffff]
+       [    0.692361] DMAR: Intel(R) Virtualization Technology for Directed I/O
+       [    0.692399] iommu: Adding device 0000:00:00.0 to group 0
+       [    0.692415] iommu: Adding device 0000:00:01.0 to group 1
+       ...
 
 Check that nvidia driver is not loaded :: 
 
