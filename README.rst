@@ -90,11 +90,29 @@ The changes are done on the physical host that has GPU cards and will be hosting
         intel_iommu=on iommu=pt pci=realloc rdblacklist=nvidia
 
       The last flag is to disable loading of nvidia driver.  
-   #. **CentOS 7**: append the kernel command line parameters to the GRUB_CMDLINE_LINUX entry in /etc/sysconfig/grub ::
+   #. **CentOS 7**: 
+ 
+      find the NVIDIA card PCI bus IDS ::
+
+        [root@vm-container-0-15 ~]# lspci -nn | grep NVIDIA
+        02:00.0 VGA compatible controller [0300]: NVIDIA Corporation GP106 [GeForce GTX 1060 6GB] [10de:1c03] (rev a1)
+        02:00.1 Audio device [0403]: NVIDIA Corporation GP106 High Definition Audio Controller [10de:10f1] (rev a1)
+        03:00.0 VGA compatible controller [0300]: NVIDIA Corporation GP106 [GeForce GTX 1060 6GB] [10de:1c03] (rev a1)
+        03:00.1 Audio device [0403]: NVIDIA Corporation GP106 High Definition Audio Controller [10de:10f1] (rev a1)
+        83:00.0 VGA compatible controller [0300]: NVIDIA Corporation GF110GL [Tesla C2050 / C2075] [10de:1096] (rev a1)
+        84:00.0 3D controller [0302]: NVIDIA Corporation GK110GL [Tesla K20Xm] [10de:1021] (rev a1)
+
+      The IDS are identified by ``[10de:...]``.
+      Append the kernel command line parameters to the GRUB_CMDLINE_LINUX entry in ``/etc/default/grub``  and use IDS 
+      in the pci-stub.ids variable ::
    
-        intel_iommu=on iommu=pt pci=realloc rdblacklist=nvidia,nouveau
+        intel_iommu=on iommu=pt pci=realloc rdblacklist=nvidia,nouveau pci-stub.ids=10de:1c03,10de:10f1,10de:1096,10de:1021
       
-      Regenerate grub configuration with dracut :: 
+      generate new grub configuration with nvidia nouveau disabled ::
+
+        grub2-mkconfig -o /boot/grub2/grub.cfg
+
+      Regenerate initramfs with dracut :: 
       
         dracut --regenerate-all --force
 
@@ -109,10 +127,10 @@ The changes are done on the physical host that has GPU cards and will be hosting
    To uninstall the driver :: 
 
      /opt/cuda/driver/uninstall-driver 
-     more /var/log/nvidia-uninstall.log
+     /chkconfig --del nvidia
 
+   Check ``/var/log/nvidia-uninstall.log`` file  for errors and reboot the host.
 
-Reboot.  
 
 When the host is rebooted, check if the changes are enabled:  
 
