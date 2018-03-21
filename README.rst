@@ -51,10 +51,13 @@ To add this roll to existing cluster, execute these instructions on a Rocks fron
 On the vm-container nodes (only GPU-enabled): :: 
 
     # yum clean all 
-    # yum install rocks-command-gpupt
+    # yum install rocks-command-gpupt gpupt-qemu
 
 What is installed:
 -------------------
+
+#. QEMU emulator version 2.10.1, installed in ``/usr/local``.
+   This version can parse variables that a current Centos7 suppliesd qemu v. 1.5.3 does not.
 
 #. The following commands are enabled with the gpupt roll: :: 
 
