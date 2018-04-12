@@ -373,6 +373,70 @@ Useful links for enabling PCI passthrough devices
 * Determine if your processor supports `Intel Virtualization Technology`_
 * Red HAt `Guest VM device configuration`_
 
+
+Examples if gpupt command
+----------------------------
+
+::
+
+    [root@vm-container-0-15 ~]# gpupci -l
+    gpupci1 pci_0000_02_00_0
+    gpupci2 pci_0000_03_00_0
+    gpupci3 pci_0000_83_00_0
+    gpupci4 pci_0000_84_00_0
+
+    [root@vm-container-0-15 ~]# gpupci -s all
+    GPU card 'gpupci1' video device 0000:02:00.0 is linked to bus/pci/drivers/nvidia driver
+    GPU card 'gpupci1' audio device 0000:02:00.1 is linked to bus/pci/drivers/snd_hda_intel driver
+    GPU card 'gpupci2' video device 0000:03:00.0 is linked to bus/pci/drivers/nvidia driver
+    GPU card 'gpupci2' audio device 0000:03:00.1 is linked to bus/pci/drivers/snd_hda_intel driver
+    GPU card 'gpupci3' video device 0000:83:00.0 is linked to bus/pci/drivers/nvidia driver
+    GPU card 'gpupci3' audio device 0000:83:00.1 is linked to bus/pci/drivers/snd_hda_intel driver
+    GPU card 'gpupci4' video device 0000:84:00.0 is linked to bus/pci/drivers/nvidia driver
+    GPU card 'gpupci4' audio device 0000:84:00.1 is linked to bus/pci/drivers/snd_hda_intel driver
+
+    [root@vm-container-0-15 ~]# gpupci -d all
+    Detached GPU card 'gpupci1' video device 0000:02:00.0
+    Detached GPU card 'gpupci1' audio device 0000:02:00.1
+    GPU card 'gpupci2' video device 0000:03:00.0 is already detached
+    Detached GPU card 'gpupci2' audio device 0000:03:00.1
+    GPU card 'gpupci3' video device 0000:83:00.0 is already detached
+    Detached GPU card 'gpupci3' audio device 0000:83:00.1
+    GPU card 'gpupci4' video device 0000:84:00.0 is already detached
+    Detached GPU card 'gpupci4' audio device 0000:84:00.1
+
+
+    [root@vm-container-0-15 ~]# gpupci -s all
+    GPU card 'gpupci1' video device 0000:02:00.0 is linked to bus/pci/drivers/pci-stub driver
+    GPU card 'gpupci1' audio device 0000:02:00.1 is linked to bus/pci/drivers/pci-stub driver
+    GPU card 'gpupci2' video device 0000:03:00.0 is linked to bus/pci/drivers/pci-stub driver
+    GPU card 'gpupci2' audio device 0000:03:00.1 is linked to bus/pci/drivers/pci-stub driver
+    GPU card 'gpupci3' video device 0000:83:00.0 is linked to bus/pci/drivers/pci-stub driver
+    GPU card 'gpupci3' audio device 0000:83:00.1 is linked to bus/pci/drivers/pci-stub driver
+    GPU card 'gpupci4' video device 0000:84:00.0 is linked to bus/pci/drivers/pci-stub driver
+    GPU card 'gpupci4' audio device 0000:84:00.1 is linked to bus/pci/drivers/pci-stub driver
+
+    [root@vm-container-0-15 log]# gpupci -a gpupci1
+    Attached video card 0000:02:00.0 of gpupci1
+    Attached audio card 0000:02:00.1 of gpupci1
+
+    [root@vm-container-0-15 log]# gpupci -l
+    gpupci1 pci_0000_02_00_0
+    gpupci2 pci_0000_03_00_0
+    gpupci3 pci_0000_83_00_0
+    gpupci4 pci_0000_84_00_0
+
+    [root@vm-container-0-15 log]# gpupci -s all
+    GPU card 'gpupci1' video device 0000:02:00.0 is linked to bus/pci/drivers/nvidia driver
+    GPU card 'gpupci1' audio device 0000:02:00.1 is linked to bus/pci/drivers/snd_hda_intel driver
+    GPU card 'gpupci2' video device 0000:03:00.0 is linked to bus/pci/drivers/pci-stub driver
+    GPU card 'gpupci2' audio device 0000:03:00.1 is linked to bus/pci/drivers/pci-stub driver
+    GPU card 'gpupci3' video device 0000:83:00.0 is linked to bus/pci/drivers/pci-stub driver
+    GPU card 'gpupci3' audio device 0000:83:00.1 is linked to bus/pci/drivers/pci-stub driver
+    GPU card 'gpupci4' video device 0000:84:00.0 is linked to bus/pci/drivers/pci-stub driver
+    GPU card 'gpupci4' audio device 0000:84:00.1 is linked to bus/pci/drivers/pci-stub driver
+
+
 .. _PCI passthrough with KVM: https://docs-old.fedoraproject.org/en-US/Fedora/13/html/Virtualization_Guide/chap-Virtualization-PCI_passthrough.html
 .. _Intel Virtualization Technology: http://www.intel.com/content/www/us/en/support/processors/000005486.html
 .. _Guest VM device configuration: https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Virtualization_Deployment_and_Administration_Guide/chap-Guest_virtual_machine_device_configuration.html#sect-device-GPU
