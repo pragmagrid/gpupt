@@ -55,6 +55,7 @@ VM start fails with error
 pci-assign: Cannot read from host /sys/bus/pci/devices/0000:02:00.0/rom
 Device option ROM contents are probably invalid (check dmesg).
 Skip option ROM probe with rombar=0, or load from file with romfile=
+```
 
 To fix add in xml file
 
