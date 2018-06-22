@@ -374,7 +374,7 @@ Useful links for enabling PCI passthrough devices
 * Red HAt `Guest VM device configuration`_
 
 
-Examples if gpupt command
+Examples of gpupt command
 ----------------------------
 
 ::
